@@ -40,17 +40,23 @@ public class CreatureCapture extends JavaPlugin implements Listener {
 
         item.addUnsafeEnchantment(Enchantment.SILK_TOUCH, 1);
         ItemMeta meta = item.getItemMeta();
-        Objects.requireNonNull(meta).setDisplayName(ChatColor.RED + (ChatColor.BOLD + "Capture Bow") + ChatColor.GOLD);
-        ArrayList<String> lore = new ArrayList<>();
-        if (maxDurability != -1) {
-            lore.add(maxDurability + "/" + maxDurability);
-        } else {
-            lore.add("∞");
-        }
+        Objects.requireNonNull(meta).setDisplayName(getCaptureBowDisplayName());
+        ArrayList<String> lore = new ArrayList<>(buildCaptureBowLore(maxDurability));
         meta.setLore(lore);
         meta.setUnbreakable(true);
         item.setItemMeta(meta);
         return item;
+    }
+
+    static String getCaptureBowDisplayName() {
+        return ChatColor.RED + "" + ChatColor.BOLD + "Capture Bow" + ChatColor.GOLD;
+    }
+
+    static List<String> buildCaptureBowLore(int durability) {
+        if (durability == -1) {
+            return Collections.singletonList("\u221e");
+        }
+        return Collections.singletonList(durability + "/" + durability);
     }
 
     @Override

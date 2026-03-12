@@ -1,6 +1,6 @@
 name: CreatureCapture
 main: me.crylonz.CreatureCapture
-version: "2.2.1"
+version: "${version}"
 author: Crylonz
 description: Capture monster !
 api-version: "1.13"

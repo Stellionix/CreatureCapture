@@ -30,3 +30,8 @@
 .idea/compiler.xml
 .idea/checkstyle-idea.xml
 target/CreatureCapture-2.0.jar
+.gradle/
+build/
+/.idea/modules/CreatureCapture.main.iml
+/.idea/modules/CreatureCapture.test.iml
+/.idea/gradle.xml

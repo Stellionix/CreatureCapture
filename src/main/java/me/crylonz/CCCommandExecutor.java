@@ -31,7 +31,10 @@ public class CCCommandExecutor implements CommandExecutor, TabExecutor {
             if (cmd.getName().equalsIgnoreCase("cc")) {
                 if (args.length < 1) return true;
 
-                if (args[0].equalsIgnoreCase("get") && (player.hasPermission("creaturecapture.cc") || player.hasPermission("creaturecapture.get"))) {
+                if (args[0].equalsIgnoreCase("get") && canUseGetCommand(
+                        player.hasPermission("creaturecapture.cc"),
+                        player.hasPermission("creaturecapture.get")
+                )) {
                     player.getInventory().addItem(generateCaptureBow(new ItemStack(Material.BOW)));
                 }
 
@@ -50,10 +53,25 @@ public class CCCommandExecutor implements CommandExecutor, TabExecutor {
     public List<String> onTabComplete(final CommandSender sender, final Command command, final String label, final String[] args) {
         List<String> tabs = new ArrayList<>();
         if (args.length == 1) {
-            if (sender.hasPermission("creaturecapture.cc") || sender.hasPermission("creaturecapture.get"))
-                tabs.add("get");
-            if (sender.hasPermission("creaturecapture.reload"))
-                tabs.add("reload");
+            tabs.addAll(buildTabCompletions(
+                    canUseGetCommand(sender.hasPermission("creaturecapture.cc"), sender.hasPermission("creaturecapture.get")),
+                    sender.hasPermission("creaturecapture.reload")
+            ));
+        }
+        return tabs;
+    }
+
+    static boolean canUseGetCommand(boolean hasCcPermission, boolean hasGetPermission) {
+        return hasCcPermission || hasGetPermission;
+    }
+
+    static List<String> buildTabCompletions(boolean canGet, boolean canReload) {
+        List<String> tabs = new ArrayList<>();
+        if (canGet) {
+            tabs.add("get");
+        }
+        if (canReload) {
+            tabs.add("reload");
         }
         return tabs;
     }
