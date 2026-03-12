@@ -1,9 +1,10 @@
 plugins {
     java
+    id("com.github.johnrengelman.shadow") version "8.1.1"
 }
 
 group = "me.crylonz"
-version = "2.2.1"
+version = "2.3.0"
 
 repositories {
     mavenCentral()
@@ -40,13 +41,9 @@ tasks.processResources {
     }
 }
 
-tasks.jar {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    from({
-        configurations.runtimeClasspath.get()
-            .filter { it.name.endsWith(".jar") }
-            .map { zipTree(it) }
-    })
+
+tasks.shadowJar {
+    archiveClassifier.set("")
 }
 
 tasks.test {
