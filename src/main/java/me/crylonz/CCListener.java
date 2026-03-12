@@ -16,7 +16,6 @@ import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.plugin.Plugin;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,9 +25,9 @@ import static me.crylonz.CreatureCapture.*;
 
 public class CCListener implements Listener {
 
-    private Plugin plugin;
+    private final CreatureCapture plugin;
 
-    public CCListener(Plugin plugin) {
+    public CCListener(CreatureCapture plugin) {
         this.plugin = plugin;
     }
 
@@ -156,19 +155,15 @@ public class CCListener implements Listener {
                                     if (Bukkit.getVersion().contains("1.12")) {
                                         egg = new ItemStack(Objects.requireNonNull(Material.getMaterial("MONSTER_EGG")), 1, e.getEntity().getType().getTypeId());
                                     } else {
-                                        // issue of the API giving mushroom instead of mooshroom
-                                        if(e.getEntity().getType() == EntityType.MUSHROOM_COW) {
-                                            egg = new ItemStack(Material.valueOf( "MOOSHROOM_SPAWN_EGG"));
-                                        } else {
-                                            egg = new ItemStack(Material.valueOf(e.getEntity().getType().name() + "_SPAWN_EGG"));
-
-                                        }
+                                        egg = new ItemStack(resolveSpawnEggMaterial(e.getEntity().getType()));
                                     }
 
                                     player.getWorld().dropItem(e.getEntity().getLocation(), egg);
+                                    boolean isNewCapture = plugin.recordCapture(player.getUniqueId(), player.getName(), e.getEntity().getType());
                                     e.getEntity().remove();
                                     player.getWorld().playEffect(e.getEntity().getLocation(), Effect.ENDER_SIGNAL, 10);
                                     players.remove(player);
+                                    sendCaptureMessage(player, e.getEntity().getType(), isNewCapture);
 
                                 } catch (IllegalArgumentException ignored) {
                                     plugin.getLogger().severe(ignored.getMessage());
@@ -178,9 +173,11 @@ public class CCListener implements Listener {
                                         meta.setDisplayName(ChatColor.RESET + "Iron Golem Spawn Egg");
                                         golemEgg.setItemMeta(meta);
                                         player.getWorld().dropItem(e.getEntity().getLocation(), golemEgg);
+                                        boolean isNewCapture = plugin.recordCapture(player.getUniqueId(), player.getName(), e.getEntity().getType());
                                         e.getEntity().remove();
                                         player.getWorld().playEffect(e.getEntity().getLocation(), Effect.ENDER_SIGNAL, 10);
                                         players.remove(player);
+                                        sendCaptureMessage(player, e.getEntity().getType(), isNewCapture);
                                     }
                                 }
                             }
@@ -189,5 +186,24 @@ public class CCListener implements Listener {
                 }
             }
         }
+    }
+
+    private void sendCaptureMessage(Player player, EntityType entityType, boolean isNewCapture) {
+        if (isNewCapture) {
+            player.sendMessage(ChatColor.GOLD + "New creature discovered: " + ChatColor.GREEN + CreatureCapture.formatEntityTypeName(entityType.name()));
+        } else {
+            player.sendMessage(ChatColor.YELLOW + "Captured " + ChatColor.WHITE + CreatureCapture.formatEntityTypeName(entityType.name()));
+        }
+    }
+
+    private Material resolveSpawnEggMaterial(EntityType entityType) {
+        String entityName = entityType.name();
+
+        // The mushroom cow enum was renamed across API generations, but the spawn egg item stayed mooshroom.
+        if ("MUSHROOM_COW".equals(entityName) || "MOOSHROOM".equals(entityName)) {
+            return Material.valueOf("MOOSHROOM_SPAWN_EGG");
+        }
+
+        return Material.valueOf(entityName + "_SPAWN_EGG");
     }
 }

@@ -11,8 +11,9 @@ repositories {
 }
 
 dependencies {
-    compileOnly("org.spigotmc:spigot-api:1.20.1-R0.1-SNAPSHOT")
-    testImplementation("org.spigotmc:spigot-api:1.20.1-R0.1-SNAPSHOT")
+    compileOnly("org.spigotmc:spigot-api:1.21.1-R0.1-SNAPSHOT")
+    testImplementation("org.xerial:sqlite-jdbc:3.49.1.0")
+    testImplementation("org.spigotmc:spigot-api:1.21.1-R0.1-SNAPSHOT")
     testImplementation("org.junit.jupiter:junit-jupiter:5.12.0")
     testImplementation("org.mockito:mockito-core:5.16.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.12.0")
@@ -37,6 +38,15 @@ tasks.processResources {
     filesMatching("plugin.yml") {
         expand("version" to project.version)
     }
+}
+
+tasks.jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from({
+        configurations.runtimeClasspath.get()
+            .filter { it.name.endsWith(".jar") }
+            .map { zipTree(it) }
+    })
 }
 
 tasks.test {

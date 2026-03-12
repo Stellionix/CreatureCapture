@@ -16,6 +16,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -34,6 +35,7 @@ public class CreatureCapture extends JavaPlugin implements Listener {
     public static double chanceToCapture = 50;
     public static boolean spawnersCanBeModifiedByEgg = true;
     public static Map<String, Boolean> spawnableMobEggs;
+    private CaptureStore captureStore;
 
 
     public static ItemStack generateCaptureBow(ItemStack item) {
@@ -68,6 +70,7 @@ public class CreatureCapture extends JavaPlugin implements Listener {
         Objects.requireNonNull(this.getCommand("cc"), "Command dc not found").setExecutor(new CCCommandExecutor(this));
 
         loadConfig();
+        loadCaptures();
 
         randVal = Math.random() * 100;
     }
@@ -106,6 +109,7 @@ public class CreatureCapture extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
+        closeCaptures();
     }
 
     public static class Reminder {
@@ -182,6 +186,77 @@ public class CreatureCapture extends JavaPlugin implements Listener {
                         Enum::toString,
                         entityType -> true
                 ));
+    }
+
+    void loadCaptures() {
+        captureStore = new CaptureStore(getDataFolder(), getLogger()::warning, getLogger()::severe);
+        try {
+            captureStore.open();
+        } catch (SQLException e) {
+            getLogger().severe("Unable to initialize captures database: " + e.getMessage());
+        }
+    }
+
+    void closeCaptures() {
+        if (captureStore != null) {
+            captureStore.close();
+        }
+    }
+
+    boolean recordCapture(UUID playerId, EntityType entityType) {
+        if (captureStore == null) {
+            return false;
+        }
+        return captureStore.recordCapture(playerId, "", entityType);
+    }
+
+    boolean recordCapture(UUID playerId, String playerName, EntityType entityType) {
+        if (captureStore == null) {
+            return false;
+        }
+        return captureStore.recordCapture(playerId, playerName, entityType);
+    }
+
+    Set<String> getCapturedCreatures(UUID playerId) {
+        if (captureStore == null) {
+            return Collections.emptySet();
+        }
+        return captureStore.getCapturedCreatures(playerId);
+    }
+
+    PlayerCaptureStats getPlayerStats(UUID playerId) {
+        if (captureStore == null) {
+            return new PlayerCaptureStats("", 0);
+        }
+        return captureStore.getPlayerStats(playerId);
+    }
+
+    List<LeaderboardEntry> getTopPlayers(int limit) {
+        if (captureStore == null) {
+            return Collections.emptyList();
+        }
+        return captureStore.getTopPlayers(limit);
+    }
+
+    static List<EntityType> getCollectibleEntityTypes() {
+        return Arrays.stream(EntityType.values())
+                .filter(entityType -> entityType.isAlive() && entityType.isSpawnable())
+                .sorted(Comparator.comparing(Enum::name))
+                .collect(Collectors.toList());
+    }
+
+    static int calculateCollectionProgress(int capturedCount, int totalCount) {
+        if (totalCount <= 0) {
+            return 0;
+        }
+        return (int) Math.round((capturedCount * 100.0) / totalCount);
+    }
+
+    static String formatEntityTypeName(String entityTypeName) {
+        return Arrays.stream(entityTypeName.toLowerCase(Locale.ROOT).split("_"))
+                .filter(part -> !part.isBlank())
+                .map(part -> Character.toUpperCase(part.charAt(0)) + part.substring(1))
+                .collect(Collectors.joining(" "));
     }
 }
 

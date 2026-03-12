@@ -7,7 +7,7 @@ api-version: "1.13"
 commands:
   cc:
     description: is the base command for CreatureCapture plugin.
-    usage: /cc <get|reload>
+    usage: /cc <get|reload|collection|stats|top>
     #permission: creaturecapture.cc
 
 permissions:
@@ -23,3 +23,12 @@ permissions:
   creaturecapture.reload:
     description: Allows you to reload settings.
     default: op
+  creaturecapture.collection:
+    description: Allows you to view your creature collection.
+    default: true
+  creaturecapture.stats:
+    description: Allows you to view your creature stats.
+    default: true
+  creaturecapture.top:
+    description: Allows you to view the creature leaderboard.
+    default: true
