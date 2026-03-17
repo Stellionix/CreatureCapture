@@ -6,16 +6,20 @@ import org.bukkit.enchantments.EnchantmentOffer;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.enchantment.EnchantItemEvent;
 import org.bukkit.event.enchantment.PrepareItemEnchantEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.metadata.FixedMetadataValue;
+import org.bukkit.projectiles.ProjectileSource;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,6 +29,7 @@ import static me.crylonz.CreatureCapture.*;
 
 public class CCListener implements Listener {
 
+    private static final String CAPTURE_ARROW_METADATA = "creaturecapture.capturearrow";
     private final CreatureCapture plugin;
 
     public CCListener(CreatureCapture plugin) {
@@ -74,8 +79,9 @@ public class CCListener implements Listener {
                     e.getBow().setItemMeta(meta);
                 }
 
-                players.add((Player) e.getEntity());
-                new CreatureCapture.Reminder(3);
+                if (e.getProjectile() instanceof Projectile projectile) {
+                    projectile.setMetadata(CAPTURE_ARROW_METADATA, new FixedMetadataValue(plugin, true));
+                }
             }
         }
     }
@@ -127,64 +133,35 @@ public class CCListener implements Listener {
 
     @EventHandler
     public void onEntityDamageByEntityEvent(EntityDamageByEntityEvent e) {
+        if (!(e.getDamager() instanceof Projectile projectile) || !projectile.hasMetadata(CAPTURE_ARROW_METADATA)) {
+            return;
+        }
 
-        if (e.getDamager().getType() == EntityType.ARROW) {
-            List<Entity> entities = e.getDamager().getNearbyEntities(50, 30, 50);
+        Player player = getShooter(projectile);
+        if (player == null || e.getEntity() instanceof Player) {
+            return;
+        }
 
-            for (Entity entity : entities) {
-                if (entity instanceof Player) {
-                    Player player = (Player) entity;
+        if (tryCapture(player, e.getEntity())) {
+            e.setCancelled(true);
+        }
+    }
 
-                    if (player.hasPermission("creaturecapture.capture")) {
+    @EventHandler
+    public void onProjectileHitEvent(ProjectileHitEvent e) {
+        Projectile projectile = e.getEntity();
+        if (!projectile.hasMetadata(CAPTURE_ARROW_METADATA)) {
+            return;
+        }
 
-                        // if this mob is disabled in option
-                        Boolean allowed = spawnableMobEggs.get(e.getEntity().getType().toString());
-                        if (allowed == null || !allowed) {
-                            return;
-                        }
+        Entity hitEntity = e.getHitEntity();
+        if (hitEntity == null || hitEntity instanceof Player) {
+            return;
+        }
 
-                        ItemStack item = player.getInventory().getItemInMainHand();
-                        if (item.getType() == Material.BOW && item.getEnchantments().containsKey(Enchantment.SILK_TOUCH)) {
-
-                            if (!(e.getEntity() instanceof Player) && players.contains(player) && chanceToCapture >= Math.random() * 100) {
-
-                                e.setCancelled(true);
-                                ItemStack egg;
-
-                                try {
-                                    if (Bukkit.getVersion().contains("1.12")) {
-                                        egg = new ItemStack(Objects.requireNonNull(Material.getMaterial("MONSTER_EGG")), 1, e.getEntity().getType().getTypeId());
-                                    } else {
-                                        egg = new ItemStack(resolveSpawnEggMaterial(e.getEntity().getType()));
-                                    }
-
-                                    player.getWorld().dropItem(e.getEntity().getLocation(), egg);
-                                    boolean isNewCapture = plugin.recordCapture(player.getUniqueId(), player.getName(), e.getEntity().getType());
-                                    e.getEntity().remove();
-                                    player.getWorld().playEffect(e.getEntity().getLocation(), Effect.ENDER_SIGNAL, 10);
-                                    players.remove(player);
-                                    sendCaptureMessage(player, e.getEntity().getType(), isNewCapture);
-
-                                } catch (IllegalArgumentException ignored) {
-                                    plugin.getLogger().severe(ignored.getMessage());
-                                    if (e.getEntity().getType() == EntityType.IRON_GOLEM) {
-                                        ItemStack golemEgg = new ItemStack(Material.POLAR_BEAR_SPAWN_EGG, 1);
-                                        ItemMeta meta = golemEgg.getItemMeta();
-                                        meta.setDisplayName(ChatColor.RESET + "Iron Golem Spawn Egg");
-                                        golemEgg.setItemMeta(meta);
-                                        player.getWorld().dropItem(e.getEntity().getLocation(), golemEgg);
-                                        boolean isNewCapture = plugin.recordCapture(player.getUniqueId(), player.getName(), e.getEntity().getType());
-                                        e.getEntity().remove();
-                                        player.getWorld().playEffect(e.getEntity().getLocation(), Effect.ENDER_SIGNAL, 10);
-                                        players.remove(player);
-                                        sendCaptureMessage(player, e.getEntity().getType(), isNewCapture);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+        Player player = getShooter(projectile);
+        if (player != null) {
+            tryCapture(player, hitEntity);
         }
     }
 
@@ -196,14 +173,58 @@ public class CCListener implements Listener {
         }
     }
 
-    private Material resolveSpawnEggMaterial(EntityType entityType) {
-        String entityName = entityType.name();
+    private Player getShooter(Projectile projectile) {
+        ProjectileSource shooter = projectile.getShooter();
+        if (shooter instanceof Player player && player.hasPermission("creaturecapture.capture")) {
+            return player;
+        }
+        return null;
+    }
 
-        // The mushroom cow enum was renamed across API generations, but the spawn egg item stayed mooshroom.
-        if ("MUSHROOM_COW".equals(entityName) || "MOOSHROOM".equals(entityName)) {
-            return Material.valueOf("MOOSHROOM_SPAWN_EGG");
+    private boolean tryCapture(Player player, Entity target) {
+        if (!target.isValid() || target.isDead()) {
+            return false;
         }
 
-        return Material.valueOf(entityName + "_SPAWN_EGG");
+        Boolean allowed = spawnableMobEggs.get(target.getType().toString());
+        if (allowed == null || !allowed || chanceToCapture < Math.random() * 100) {
+            return false;
+        }
+
+        ItemStack egg;
+        try {
+            if (Bukkit.getVersion().contains("1.12")) {
+                egg = new ItemStack(Objects.requireNonNull(Material.getMaterial("MONSTER_EGG")), 1, target.getType().getTypeId());
+            } else if (target.getType() == EntityType.IRON_GOLEM) {
+                egg = createIronGolemEgg();
+            } else {
+                Material spawnEggMaterial = CreatureCapture.resolveSpawnEggMaterial(target.getType());
+                if (spawnEggMaterial == null) {
+                    return false;
+                }
+                egg = new ItemStack(spawnEggMaterial);
+            }
+        } catch (IllegalArgumentException ignored) {
+            plugin.getLogger().severe(ignored.getMessage());
+            if (target.getType() != EntityType.IRON_GOLEM) {
+                return false;
+            }
+            egg = createIronGolemEgg();
+        }
+
+        player.getWorld().dropItem(target.getLocation(), egg);
+        boolean isNewCapture = plugin.recordCapture(player.getUniqueId(), player.getName(), target.getType());
+        target.remove();
+        player.getWorld().playEffect(target.getLocation(), Effect.ENDER_SIGNAL, 10);
+        sendCaptureMessage(player, target.getType(), isNewCapture);
+        return true;
+    }
+
+    private ItemStack createIronGolemEgg() {
+        ItemStack golemEgg = new ItemStack(Material.POLAR_BEAR_SPAWN_EGG, 1);
+        ItemMeta meta = golemEgg.getItemMeta();
+        meta.setDisplayName(ChatColor.RESET + "Iron Golem Spawn Egg");
+        golemEgg.setItemMeta(meta);
+        return golemEgg;
     }
 }

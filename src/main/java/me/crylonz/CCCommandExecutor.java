@@ -6,6 +6,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -26,11 +27,24 @@ public class CCCommandExecutor implements CommandExecutor, TabExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-        if (!(sender instanceof Player player) || !cmd.getName().equalsIgnoreCase("cc")) {
+        if (!cmd.getName().equalsIgnoreCase("cc")) {
             return true;
         }
 
         if (args.length < 1) {
+            return true;
+        }
+
+        if (args[0].equalsIgnoreCase("reload") && sender.hasPermission("creaturecapture.reload")) {
+            sender.sendMessage("reload config....");
+            plugin.reloadConfig();
+            plugin.loadConfig();
+            plugin.getLogger().info("Configuration reloaded by " + sender.getName() + ".");
+            sender.sendMessage("config reloaded.");
+            return true;
+        }
+
+        if (!(sender instanceof Player player)) {
             return true;
         }
 
@@ -39,13 +53,6 @@ public class CCCommandExecutor implements CommandExecutor, TabExecutor {
                 player.hasPermission("creaturecapture.get")
         )) {
             player.getInventory().addItem(generateCaptureBow(new ItemStack(Material.BOW)));
-        }
-
-        if (args[0].equalsIgnoreCase("reload") && player.hasPermission("creaturecapture.reload")) {
-            player.sendMessage("reload config....");
-            plugin.reloadConfig();
-            plugin.loadConfig();
-            player.sendMessage("config reloaded.");
         }
 
         if (args[0].equalsIgnoreCase("collection") && canUseCollectionCommand(
@@ -60,6 +67,13 @@ public class CCCommandExecutor implements CommandExecutor, TabExecutor {
                 player.hasPermission("creaturecapture.stats")
         )) {
             sendStatsMessage(player);
+        }
+
+        if (args[0].equalsIgnoreCase("remaining") && canUseRemainingCommand(
+                player.hasPermission("creaturecapture.cc"),
+                player.hasPermission("creaturecapture.remaining")
+        )) {
+            sendRemainingMessage(player);
         }
 
         if (args[0].equalsIgnoreCase("top") && canUseTopCommand(
@@ -81,6 +95,7 @@ public class CCCommandExecutor implements CommandExecutor, TabExecutor {
                     sender.hasPermission("creaturecapture.reload"),
                     canUseCollectionCommand(sender.hasPermission("creaturecapture.cc"), sender.hasPermission("creaturecapture.collection")),
                     canUseStatsCommand(sender.hasPermission("creaturecapture.cc"), sender.hasPermission("creaturecapture.stats")),
+                    canUseRemainingCommand(sender.hasPermission("creaturecapture.cc"), sender.hasPermission("creaturecapture.remaining")),
                     canUseTopCommand(sender.hasPermission("creaturecapture.cc"), sender.hasPermission("creaturecapture.top"))
             ));
         }
@@ -99,11 +114,15 @@ public class CCCommandExecutor implements CommandExecutor, TabExecutor {
         return hasCcPermission || hasStatsPermission;
     }
 
+    static boolean canUseRemainingCommand(boolean hasCcPermission, boolean hasRemainingPermission) {
+        return hasCcPermission || hasRemainingPermission;
+    }
+
     static boolean canUseTopCommand(boolean hasCcPermission, boolean hasTopPermission) {
         return hasCcPermission || hasTopPermission;
     }
 
-    static List<String> buildTabCompletions(boolean canGet, boolean canReload, boolean canCollection, boolean canStats, boolean canTop) {
+    static List<String> buildTabCompletions(boolean canGet, boolean canReload, boolean canCollection, boolean canStats, boolean canRemaining, boolean canTop) {
         List<String> tabs = new ArrayList<>();
         if (canGet) {
             tabs.add("get");
@@ -116,6 +135,9 @@ public class CCCommandExecutor implements CommandExecutor, TabExecutor {
         }
         if (canStats) {
             tabs.add("stats");
+        }
+        if (canRemaining) {
+            tabs.add("remaining");
         }
         if (canTop) {
             tabs.add("top");
@@ -151,6 +173,26 @@ public class CCCommandExecutor implements CommandExecutor, TabExecutor {
         player.sendMessage(ChatColor.GOLD + "Creature Stats");
         player.sendMessage(ChatColor.YELLOW + "Unique captures: " + ChatColor.WHITE + stats.uniqueCaptureCount());
         player.sendMessage(ChatColor.YELLOW + "Completion: " + ChatColor.WHITE + progress + "%");
+    }
+
+    private void sendRemainingMessage(Player player) {
+        Set<String> capturedCreatures = plugin.getCapturedCreatures(player.getUniqueId());
+        List<EntityType> remainingCreatures = CreatureCapture.getRemainingCollectibleEntityTypes(capturedCreatures);
+
+        player.sendMessage(ChatColor.GOLD + "Creatures Remaining");
+        player.sendMessage(ChatColor.YELLOW + "Remaining: " + ChatColor.WHITE + remainingCreatures.size());
+
+        if (remainingCreatures.isEmpty()) {
+            player.sendMessage(ChatColor.GREEN + "Your collection is complete.");
+            return;
+        }
+
+        String remaining = remainingCreatures.stream()
+                .map(EntityType::name)
+                .map(CreatureCapture::formatEntityTypeName)
+                .collect(Collectors.joining(ChatColor.DARK_GRAY + ", " + ChatColor.RED, ChatColor.RED.toString(), ""));
+
+        player.sendMessage(ChatColor.YELLOW + "Missing: " + remaining);
     }
 
     private void sendTopMessage(Player player) {

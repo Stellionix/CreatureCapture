@@ -240,8 +240,14 @@ public class CreatureCapture extends JavaPlugin implements Listener {
 
     static List<EntityType> getCollectibleEntityTypes() {
         return Arrays.stream(EntityType.values())
-                .filter(entityType -> entityType.isAlive() && entityType.isSpawnable())
+                .filter(CreatureCapture::isCollectibleEntityType)
                 .sorted(Comparator.comparing(Enum::name))
+                .collect(Collectors.toList());
+    }
+
+    static List<EntityType> getRemainingCollectibleEntityTypes(Set<String> capturedCreatures) {
+        return getCollectibleEntityTypes().stream()
+                .filter(entityType -> !capturedCreatures.contains(entityType.name()))
                 .collect(Collectors.toList());
     }
 
@@ -257,6 +263,25 @@ public class CreatureCapture extends JavaPlugin implements Listener {
                 .filter(part -> !part.isBlank())
                 .map(part -> Character.toUpperCase(part.charAt(0)) + part.substring(1))
                 .collect(Collectors.joining(" "));
+    }
+
+    static boolean isCollectibleEntityType(EntityType entityType) {
+        return entityType.isAlive() && (entityType == EntityType.IRON_GOLEM || hasSpawnEggMaterial(entityType));
+    }
+
+    static boolean hasSpawnEggMaterial(EntityType entityType) {
+        return resolveSpawnEggMaterial(entityType) != null;
+    }
+
+    static Material resolveSpawnEggMaterial(EntityType entityType) {
+        String entityName = entityType.name();
+
+        // The mushroom cow enum was renamed across API generations, but the spawn egg item stayed mooshroom.
+        if ("MUSHROOM_COW".equals(entityName) || "MOOSHROOM".equals(entityName)) {
+            return Material.matchMaterial("MOOSHROOM_SPAWN_EGG");
+        }
+
+        return Material.matchMaterial(entityName + "_SPAWN_EGG");
     }
 }
 

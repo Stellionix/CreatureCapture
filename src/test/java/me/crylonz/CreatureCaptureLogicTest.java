@@ -42,5 +42,8 @@ class CreatureCaptureLogicTest {
     @Test
     void getCollectibleEntityTypesContainsCommonCreatures() {
         assertTrue(CreatureCapture.getCollectibleEntityTypes().contains(EntityType.ZOMBIE));
+        assertTrue(CreatureCapture.getCollectibleEntityTypes().contains(EntityType.ENDERMAN));
+        assertTrue(CreatureCapture.getCollectibleEntityTypes().contains(EntityType.ALLAY));
+        assertTrue(CreatureCapture.getCollectibleEntityTypes().contains(EntityType.BREEZE));
     }
 }

@@ -27,12 +27,12 @@ class CCCommandExecutorLogicTest {
 
     @Test
     void buildTabCompletionsReturnsCommandsInExpectedOrder() {
-        assertEquals(List.of("get", "reload", "collection", "stats", "top"), CCCommandExecutor.buildTabCompletions(true, true, true, true, true));
+        assertEquals(List.of("get", "reload", "collection", "stats", "remaining", "top"), CCCommandExecutor.buildTabCompletions(true, true, true, true, true, true));
     }
 
     @Test
     void buildTabCompletionsSkipsUnauthorizedCommands() {
-        assertEquals(List.of("reload"), CCCommandExecutor.buildTabCompletions(false, true, false, false, false));
+        assertEquals(List.of("reload"), CCCommandExecutor.buildTabCompletions(false, true, false, false, false, false));
     }
 
     @Test
@@ -48,6 +48,11 @@ class CCCommandExecutorLogicTest {
     @Test
     void canUseStatsCommandWithSpecificPermission() {
         assertTrue(CCCommandExecutor.canUseStatsCommand(false, true));
+    }
+
+    @Test
+    void canUseRemainingCommandWithSpecificPermission() {
+        assertTrue(CCCommandExecutor.canUseRemainingCommand(false, true));
     }
 
     @Test
