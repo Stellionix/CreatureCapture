@@ -5,7 +5,7 @@
 <h2  align="center">
     <img src="http://cf.way2muchnoise.eu/full_322752_downloads.svg" alt="download"/> 
     <img src="https://github.com/stellionix/CreatureCapture/actions/workflows/ci.yml/badge.svg" alt="CI"/>
-    <img src="https://github.com/stellionix/CreatureCapture/actions/workflows/docs.yml/badge.svg" alt="Docs"/>
+    <a href="https://stellionix.github.io/CreatureCapture/"><img src="https://img.shields.io/badge/docs-online-blue" alt="Docs"/></a>
     <img src="https://img.shields.io/github/license/stellionix/creaturecapture" alt="licence"/>
     <img src="https://img.shields.io/github/last-commit/stellionix/creaturecapture" alt="commit"/>
 </h2>
@@ -52,5 +52,4 @@ Java Edition required. Creature Capture is mainly compatible with Bukkit, Spigot
 
 * Curseforge: https://www.curseforge.com/minecraft/bukkit-plugins/creaturecapture
 * Bukkit : https://dev.bukkit.org/projects/creaturecapture
-
 
