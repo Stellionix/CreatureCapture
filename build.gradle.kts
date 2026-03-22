@@ -6,6 +6,12 @@ plugins {
 group = "me.crylonz"
 version = "2.4.0"
 
+tasks.register("printVersion") {
+    doLast {
+        println(project.version)
+    }
+}
+
 repositories {
     mavenCentral()
     maven("https://hub.spigotmc.org/nexus/content/repositories/snapshots/")

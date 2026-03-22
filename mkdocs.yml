@@ -1,0 +1,27 @@
+site_name: CreatureCapture Documentation
+site_url: https://stellionix.github.io/CreatureCapture/
+repo_url: https://github.com/Stellionix/CreatureCapture
+repo_name: Stellionix/CreatureCapture
+
+plugins:
+  - search
+  - stellionix-shared-docs
+
+theme:
+  name: material
+  logo: assets/images/creature-capture-logo.png
+  favicon: assets/images/creature-capture-logo.png
+
+nav:
+  - Getting Started:
+      - Home: index.md
+      - Download: download.md
+      - Installation: installation.md
+      - How It Works: how-it-works.md
+  - Administration:
+      - Configuration: configuration.md
+      - Commands and Permissions: commands-and-perms.md
+      - Data Storage: data-storage.md
+      - Troubleshooting: troubleshooting.md
+  - Developer:
+      - Contribution: contribution.md
